@@ -1,0 +1,270 @@
+<!DOCTYPE HTML>
+<!--
+	Phantom by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Generic - Phantom by HTML5 UP</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload">
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Header -->
+					<header id="header">
+						<div class="inner">
+
+							<!-- Logo -->
+								<a href="index.html" class="logo">
+									<span class="symbol"><span class="title">Shuko Sasaki</span>
+								</a>
+
+							<!-- Nav -->
+								<nav>
+									<ul>
+										<li><a href="#menu">Menu</a></li>
+									</ul>
+								</nav>
+
+						</div>
+					</header>
+
+				<!-- Menu -->
+					<nav id="menu">
+						<h2>Menu</h2>
+						<ul>
+							<li><a href="index.html">Home</a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+						<div class="inner">
+							<h1>Cats vs Dogs model</h1>
+							<span class="image main"><img src="images/cvd.jpeg" alt="" /></span>
+						<p>following code is meant to be run on google colaboratory, it may not work on local envirnoment.</p>
+							<h2>Initial setup</h2>
+<pre><code>!apt install --allow-change-held-packages libcudnn8=8.4.1.50-1+cuda11.6
+
+import os
+import zipfile
+import random
+import shutil
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from shutil import copyfile
+import matplotlib.pyplot as plt</code></pre>
+
+<h2>get the data</h2>
+<pre><code>!wget --no-check-certificate \
+"https://download.microsoft.com/download/3/E/1/3E1C3F21-ECDB-4869-8368-6DEBA77B919F/kagglecatsanddogs_5340.zip" \
+-O "/tmp/cats-and-dogs.zip"
+
+local_zip = '/tmp/cats-and-dogs.zip'
+zip_ref   = zipfile.ZipFile(local_zip, 'r')
+zip_ref.extractall('/tmp')
+zip_ref.close()
+
+source_path = '/tmp/PetImages'
+
+source_path_dogs = os.path.join(source_path, 'Dog')
+source_path_cats = os.path.join(source_path, 'Cat')
+	
+!find /tmp/PetImages/ -type f ! -name "*.jpg" -exec rm {} +</code></pre>
+
+<p>Now the images are stored within the /tmp/PetImages directory. There is a subdirectory for each class, so one for dogs and one for cats.</p>
+
+<h2>making directories</h2>
+<pre><code>root_dir = '/tmp/cats-v-dogs'
+path = os.path.join(root_path, "training")
+path2 = os.path.join(root_path, "validation")
+os.makedirs(path)
+os.makedirs(path2)
+path_c = os.path.join(path, "cats")
+os.makedirs(path_c)
+path_p = os.path.join(path, "dogs")
+os.makedirs(path_p)
+path2_c = os.path.join(path2, "cats")
+os.makedirs(path2_c)
+path2_p = os.path.join(path2, "dogs")
+os.makedirs(path2_p)
+</code></pre>
+<p>Now we have made training and testing directories for both cats and dogs </p>
+<p>To test to see if the directories have been made</p>
+
+<pre><code>for rootdir, dirs, files in os.walk(root_dir):
+for subdir in dirs:
+print(os.path.join(rootdir, subdir))</code></pre>
+
+<p>Expected Output (directory order might vary):</p>
+<blockquote>/tmp/cats-v-dogs/training<br>
+/tmp/cats-v-dogs/validation<br>
+/tmp/cats-v-dogs/training/cats<br>
+/tmp/cats-v-dogs/training/dogs<br>
+/tmp/cats-v-dogs/validation/cats<br>
+/tmp/cats-v-dogs/validation/dogs</blockquote>
+
+<h2>Splitting the data</h2>
+<p>This funtion will split the data randomly, so that the training set is a random sample of the files, and the validation set is made up of the remaining files.
+	for this example we will split the data 9:1. And before putting them in to the directories, it will be checked, so if they have a zero file length, they will be omitted from the copying process.
+</p>
+<pre><code>def split_data(SOURCE_DIR, TRAINING_DIR, VALIDATION_DIR, SPLIT_SIZE):
+"""
+Splits the data into train and test sets
+	
+Args:
+SOURCE_DIR (string): directory path containing the images
+TRAINING_DIR (string): directory path to be used for training
+VALIDATION_DIR (string): directory path to be used for validation
+SPLIT_SIZE (float): proportion of the dataset to be used for training
+	
+Returns:
+None
+"""
+
+data = random.sample(os.listdir(SOURCE_DIR), len(os.listdir(SOURCE_DIR)))
+n = list()
+for i in data:
+  if (os.path.getsize(SOURCE_DIR+i)) == 0:
+		n.append(i)
+  for i in n:
+	data.remove(i)
+	print(f"{i} is zero length, so ignoring.")
+
+  f = data[:int(len(data)* SPLIT_SIZE)]
+  s = data[int(len(data)* SPLIT_SIZE):]
+  for i in f:
+	copyfile(SOURCE_DIR + i, TRAINING_DIR + i)
+  for i in s:
+	copyfile(SOURCE_DIR + i, VALIDATION_DIR + i)</code></pre>
+
+<h2>Generators</h2>
+<p>Now we will feed our images to the image generators</p>
+<pre><code>def train_val_generators(TRAINING_DIR, VALIDATION_DIR):
+"""
+Creates the training and validation data generators
+
+Args:
+  TRAINING_DIR (string): directory path containing the training images
+  VALIDATION_DIR (string): directory path containing the testing/validation images
+  
+Returns:
+  train_generator, validation_generator - tuple containing the generators
+"""
+
+train_datagen = ImageDataGenerator( rescale = 1.0/255. )
+
+train_generator = train_datagen.flow_from_directory(directory=TRAINING_DIR,
+						batch_size=20,
+						class_mode='binary',
+						target_size=((150, 150)))
+validation_datagen = ImageDataGenerator( rescale = 1.0/255. )
+
+validation_generator = validation_datagen.flow_from_directory(directory=VALIDATION_DIR,
+						batch_size=20,
+						class_mode='binary',
+						target_size=(150, 150))
+return train_generator, validation_generator
+train_generator, validation_generator = train_val_generators(TRAINING_DIR, VALIDATION_DIR)</code></pre>
+
+<p>Expected output</p>
+<blockquote>Found 22498 images belonging to 2 classes.<br>
+Found 2500 images belonging to 2 classes.</blockquote>
+
+<h2>Model</h2>
+<pre><code>def create_model():
+from keras.preprocessing.image import ImageDataGenerator, load_img
+from keras.layers import MaxPooling2D, BatchNormalization, Conv2D, Dropout, Flatten, Dense
+from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ReduceLROnPlateau
+from keras.callbacks import EarlyStopping
+
+from keras.models import load_model
+
+model = tf.keras.Sequential([
+  tf.keras.layers.Conv2D(16, (3, 3), activation='relu', input_shape=(150, 150, 3)),
+  tf.keras.layers.MaxPool2D((2, 2)),
+  tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+  tf.keras.layers.MaxPool2D((2, 2)),
+  tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+  tf.keras.layers.MaxPool2D((2, 2)),
+  tf.keras.layers.Flatten(),
+  tf.keras.layers.Dense(512, activation='relu'),
+  tf.keras.layers.Dense(1, activation='sigmoid')])
+  
+model.compile(optimizer="adam",
+			  loss='binary_crossentropy',
+			  metrics=['accuracy']) 
+return model</code></pre>
+
+<p>Training</p>
+<pre><code>model = create_model()
+history = model.fit(train_generator,
+	epochs=15,
+	verbose=1,
+	validation_data=validation_generator)
+</code></pre>
+
+
+
+						</div>
+					</div>
+
+				<!-- Footer -->
+					<footer id="footer">
+						<div class="inner">
+							<section>
+								<h2>Get in touch</h2>
+								<form method="post" action="#">
+									<div class="fields">
+										<div class="field half">
+											<input type="text" name="name" id="name" placeholder="Name" />
+										</div>
+										<div class="field half">
+											<input type="email" name="email" id="email" placeholder="Email" />
+										</div>
+										<div class="field">
+											<textarea name="message" id="message" placeholder="Message"></textarea>
+										</div>
+									</div>
+									<ul class="actions">
+										<li><input type="submit" value="Send" class="primary" /></li>
+									</ul>
+								</form>
+							</section>
+							<section>
+								<h2>Follow</h2>
+								<ul class="icons">
+									<li><a href="#" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-facebook-f"><span class="label">Facebook</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-dribbble"><span class="label">Dribbble</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-github"><span class="label">GitHub</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-500px"><span class="label">500px</span></a></li>
+									<li><a href="#" class="icon solid style2 fa-phone"><span class="label">Phone</span></a></li>
+									<li><a href="#" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
+								</ul>
+							</section>
+							<ul class="copyright">
+								<li>&copy; Untitled. All rights reserved</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+							</ul>
+						</div>
+					</footer>
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
