@@ -1,0 +1,446 @@
+<!DOCTYPE HTML>
+<!--
+	Phantom by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Generic - Phantom by HTML5 UP</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload">
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Header -->
+					<header id="header">
+						<div class="inner">
+
+							<!-- Logo -->
+								<a href="index.html" class="logo">
+									<span class="symbol"><span class="title">Shuko Sasaki</span>
+								</a>
+
+							<!-- Nav -->
+								<nav>
+									<ul>
+										<li><a href="#menu">Menu</a></li>
+									</ul>
+								</nav>
+
+						</div>
+					</header>
+
+				<!-- Menu -->
+					<nav id="menu">
+						<h2>Menu</h2>
+						<ul>
+							<li><a href="index.html">Home</a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+						<div class="inner">
+							<h1>Sequence-to-Sequence（Seq2Seq）model</h1>
+
+							<p>The Sequence-to-Sequence (Seq2Seq) model is a model with a mechanism that takes a sequence as input and outputs a sequence.</p>
+							<p>It is sometimes called an Encoder-Decoder model because it uses an RNN to convert the input sequence into a vector (=Encoder) and then uses another RNN to generate a sequence from that vector (=Decoder).</p>
+							<p>In recent years, various models based on this mechanism have been proposed for natural language processing using deep learning. For example, in the task of translation, it is now possible to handle problems with different word order and length in different languages, which were difficult to handle with a simple RNN.</p>
+							<P>Other applications have also been proposed, such as image caption generation, which generates a description of an image from an image input, but for this article we will use translation as an example.</p>
+							<img src="images/model.jpg" alt="" />
+
+									<pre><code>class Vocab(object):
+	def __init__(self, word2id={}):
+		"""
+		word2id: Dictionary to convert word (str) to index (int)
+		id2word: Dictionary to convert index (int) to word (str)
+		"""
+		self.word2id = dict(word2id)
+		self.id2word = {v: k for k, v in self.word2id.items()}    
+									
+	def build_vocab(self, sentences, min_count=1):
+		#Create a dictionary of the number of occurrences for each word
+		word_counter = {}
+		for sentence in sentences:
+			for word in sentence:
+				word_counter[word] = word_counter.get(word, 0) + 1
+
+		#Only add words that occur more than min_count times to the vocabulary
+		for word, count in sorted(word_counter.items(), key=lambda x: -x[1]):
+			if count < min_count:
+				break
+			_id = len(self.word2id)
+			self.word2id.setdefault(word, _id)
+			self.id2word[_id] = word </code></pre>
+
+<pre><code>import random
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
+from nltk import bleu_score
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+
+
+# Device Configurations
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+torch.manual_seed(1)
+random_state = 42</code></pre>
+
+<h1>1.Prepare the dataset </h1>
+<p>We are going to use "small_parallel_enja: 50k En/Ja Parallel Corpus for Testing SMT Methods"( <a href = https://github.com/odashi/small_parallel_enja>https://github.com/odashi/small_parallel_enja</a> ) extracted from Tanaka Corpus ( <a href="http://www.edrdg.org/wiki/index.php/Tanaka_Corpus">http://www.edrdg.org/wiki/index.php/Tanaka_Corpus</a> )</p>
+<p>The contents of train.en and train.ja are as follows.</p>
+<pre><code>! head -5 ./data/train.en</code></pre>
+
+<blockquote>i can 't tell who will arrive first .<br>
+many animals have been destroyed by men .<br>
+i 'm in the tennis club .<br>
+emi looks happy .<br>
+please bear this fact in mind .</blockquote>
+
+<pre><code>! head -5 ./data/train.ja</code></pre>
+<blockquote>誰 が 一番 に 着 く か 私 に は 分か り ま せ ん 。<br>
+多く の 動物 が 人間 に よ っ て 滅ぼ さ れ た 。<br>
+私 は テニス 部員 で す 。<br>
+エミ は 幸せ そう に 見え ま す 。<br>
+この 事実 を 心 に 留め て お い て 下さ い 。</blockquote>
+
+<h2>1.1 Data loading and word segmentation</h2>
+<pre<code>def load_data(file_path):
+# Function to read data from text files
+data = []
+for line in open(file_path, encoding='utf-8'):
+    words = line.strip().split()  # Split words with spaces
+    data.append(words)
+return data</code>></pre>
+
+<pre><code>train_X = load_data('./data/train.en')
+train_Y = load_data('./data/train.ja')
+# Reduce data size for this exercises
+train_X = train_X[:len(train_X)//2]
+train_Y = train_Y[:len(train_Y)//2]</code></pre>
+
+<pre><code># Split into training and validation data
+train_X, valid_X, train_Y, valid_Y = train_test_split(train_X, train_Y, test_size=0.2, random_state=random_state)
+
+print(train_X[0])</code></pre>
+<blockquote>['my', 'father', 'is', 'very', 'angry', 'with', 'me', '.']</blockquote>
+
+<h2>1.2 Creating a Word Dictionary</h2>
+<p>Assign an ID to each word that appears in the data set.</p>
+
+<pre><code># Special tokens should be predefined.
+PAD_TOKEN = '&lt;PAD&gt;'  # Used to fill in the end of a short series during batch processing （Padding）
+BOS_TOKEN = '&lt;S&gt;'  # Represents the beginning of a series （Beggining of sentence）
+EOS_TOKEN = '&lt;/S&gt;'  # Represents the end of a series （End of sentence）
+UNK_TOKEN = '&lt;UNK&gt;'  # Indicates a word that does not exist in the vocabulary （Unknown）
+PAD = 0
+BOS = 1
+EOS = 2
+UNK = 3</code></pre>
+
+<pre><code>MIN_COUNT = 2  # Minimum number of occurrences of the words to be included in the vocabulary
+
+# Set initial values for dictionary to convert words to IDs
+word2id = {
+	PAD_TOKEN: PAD,
+	BOS_TOKEN: BOS,
+	EOS_TOKEN: EOS,
+	UNK_TOKEN: UNK,
+	}
+
+# Create a word dictionary
+vocab_X = Vocab(word2id=word2id)
+vocab_Y = Vocab(word2id=word2id)
+vocab_X.build_vocab(train_X, min_count=MIN_COUNT)
+vocab_Y.build_vocab(train_Y, min_count=MIN_COUNT)</code></pre>
+
+<pre><code>vocab_size_X = len(vocab_X.id2word)
+vocab_size_Y = len(vocab_Y.id2word)
+print('Number of vocabulary in input language：', vocab_size_X)
+print('Number of vocabulary words in output language：', vocab_size_Y)</code></pre>
+
+<blockquote>Number of vocabulary in input language：2698<br>
+Number of vocabulary words in output language：3051
+</blockquote>
+
+<h1>2.Conversion to tensor</h1>
+<h2>2.1 Conversion to ID</h2>
+<p>To let the model recognize sentences, it converts sentences into a list of word IDs based on a word dictionary created in Vocab.</p>
+
+<pre><code>def sentence_to_ids(vocab, sentence):
+# Function to convert a list of words (str) into a list of IDs (int)
+ids = [vocab.word2id.get(word, UNK) for word in sentence]
+ids += [EOS]  # add EOS
+return ids</code></pre>
+
+<pre><code>train_X = [sentence_to_ids(vocab_X, sentence) for sentence in train_X]
+train_Y = [sentence_to_ids(vocab_Y, sentence) for sentence in train_Y]
+valid_X = [sentence_to_ids(vocab_X, sentence) for sentence in valid_X]
+valid_Y = [sentence_to_ids(vocab_Y, sentence) for sentence in valid_Y]</code></pre>
+
+<pre><code>print(train_X[0])</code></pre>
+
+<blockquote>[18, 86, 9, 52, 342, 32, 22, 4, 2]</blockquote>
+
+<h2>2.2 Define dataLoader</h2>
+<p>Define a data loader to retrieve batches from the data set.</p>
+<ul>
+	<li>In this case, to allow multiple series of different lengths to be handled in parallel in a batch, the tail of the shorter series is padded with a specific symbol (e.g., &lt;PAD&gt;) to match the length of the longest series in the batch.</li>
+	<li>We get a matrix of size (batch_size, max_length), but when actually training the model, we will advance each time across batches, so we transpose it and change it to the form (max_length, batch_size). (This is not necessary when using the batch_first=True option.)</li>
+</ul>
+<pre><code>def pad_seq(seq, max_length):
+# Padding at the end so that the series (seq) has the specified sentence length (max_length)
+res = seq + [PAD for i in range(max_length - len(seq))]
+return res 
+
+class DataLoader(object):
+
+    def __init__(self, X, Y, batch_size, shuffle=False):
+        """
+        :param X: list, List of input language sentences (list of word IDs)
+        :param Y: list, List of output language sentences (list of word IDs) 
+        :param batch_size: int, batch size
+        :param shuffle: bool, Whether to shuffle the sample order
+        """
+        self.data = list(zip(X, Y))
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.start_index = 0
+        
+        self.reset()
+	
+	def reset(self):
+        if self.shuffle:  # Shuffle the sample order
+            self.data = shuffle(self.data, random_state=random_state)
+        self.start_index = 0  # Initialize pointer position
+	
+	def __iter__(self):
+        return self
+
+	def __next__(self):
+        # Initialize when the pointer reaches the end.
+        if self.start_index >= len(self.data):
+            self.reset()
+            raise StopIteration()
+
+		# Retrieve batches
+        seqs_X, seqs_Y = zip(*self.data[self.start_index:self.start_index+self.batch_size])
+        # Sort series pairs by length of sentences in input series seqs_X (descending order)
+        seq_pairs = sorted(zip(seqs_X, seqs_Y), key=lambda p: len(p[0]), reverse=True)
+        seqs_X, seqs_Y = zip(*seq_pairs)
+        # Padding the end of short series
+        lengths_X = [len(s) for s in seqs_X]  # Also used in Encoder's pack_padded_sequence described below.
+        lengths_Y = [len(s) for s in seqs_Y]
+        max_length_X = max(lengths_X)
+        max_length_Y = max(lengths_Y)
+        padded_X = [pad_seq(s, max_length_X) for s in seqs_X]
+        padded_Y = [pad_seq(s, max_length_Y) for s in seqs_Y]
+        # Convert to tensor and transpose
+        batch_X = torch.tensor(padded_X, dtype=torch.long, device=device).transpose(0, 1)
+        batch_Y = torch.tensor(padded_Y, dtype=torch.long, device=device).transpose(0, 1)
+
+        # Update pointer
+        self.start_index += self.batch_size
+
+        return batch_X, batch_Y, lengths_X
+	</code></pre>
+
+	<h1>3.Building the model</h1>
+	<p>Define the Encoder and Decoder RNNs.</p>
+	<h2>PackedSequence</h2>
+
+	<p>In pytorch's RNN, a class called PackedSequence can be used to represent series so that batches of variable-length series can be computed efficiently.</p>
+	<p>By converting the tensor of the input batch into an instance of this PackedSeauence and then inputting it to the RNN, the padding part can be omitted from the calculation, making the calculation more efficient. (Although not used in this article, this also eliminates the need to consider the direction of padding when creating the input for a bidirectional RNN.)</p>
+	<p>To create a PackedSequence, first perform padding for batches of different series lengths.</p>	
+	<p>Now save the series lengths (lengths) of each sample before padding.</p>			
+
+	<pre><code># Create a batch consisting of three samples with series lengths of 4, 3, and 2, respectively
+batch = [[1,2,3,4], [5,6,7], [8,9]]
+lengths = [len(sample) for sample in batch]
+print('Series length for each sample:', lengths)
+print()
+
+# Padding each sample to fit the maximum series length
+_max_length = max(lengths)
+padded = torch.tensor([pad_seq(sample, _max_length) for sample in batch])
+padded = padded.transpose(0, 1)  # Transpose to (max_length, batch_size)
+print('Padded tensor:\n', padded)
+print('Padded Tensor Size:', padded.size())
+print()
+</code></pre>
+
+<blockquote>Series length for each sample: [4, 3, 2]<br>
+Padded tensor:<br>
+tensor([[1, 5, 8],<br>
+		[2, 6, 9],<br>
+	   [3, 7, 0],<br>
+	   [4, 0, 0]])<br>
+Padded Tensor Size: torch.Size([4, 3])
+</blockquote>
+
+<p>Next, by feeding the padded tensor (padded) and the original series lengths (lengths) of each sample to the function torch.cnn.utils.rnn.pack_padded_sequence, an instance of a PackedSequence with elements data and batch_sizes An instance of a PackedSequence(packed) can be created.</p>
+<ul>
+	<li>data: Vector holding only non-PAD values of the tensor</li>
+	<li>batch_sizes: vector of the number of batches that need to be calculated (= have not reached PAD) at each time</li>
+</ul>
+
+<pre><code># Converted to PackedSequence (applied before the tensor is input to the RNN)
+packed = pack_padded_sequence(padded, lengths=lengths)  # Also give the series length for each sample
+print('Instance of PackedSequence:\n', packed)
+# Instances with non-PAD values of the tensor (data) and the number of batches (batch_sizes) that need to be computed at each time (= PAD not reached)
+print()</code></pre>
+
+<blockquote>Instance of PackedSequence:
+PackedSequence(data=tensor([1, 5, 8, 2, 6, 9, 3, 7, 4]), batch_sizes=tensor([3, 3, 2, 1]), sorted_indices=None, unsorted_indices=None)
+</blockquote>
+
+<P>The obtained PackedSequence instance is input into the RNN. (Omitted here.)</P>
+<p>Since the tensor output from the RNN is still an instance of a PackedSeauence, it is converted back to a normal tensor by the function torch.nn.utils.rnn.pad_packed_sequence to connect it to the later stage of the calculation.</p>
+
+<pre><code># Input a PackedSequence instance to RNN (omitted here)
+output = packed
+
+# Return to tensor (applied to RNN output)
+output, _length = pad_packed_sequence(output)  # Returns the original tensor including PAD and the series length of each sample
+print('Original tensor including PAD:\n', output)
+print('Series length for each sample:', _length)</code></pre>
+
+<p>Original tensor including PAD:<br>
+tensor([[1, 5, 8],<br>
+	[2, 6, 9],<br>
+	[3, 7, 0],<br>
+	[4, 0, 0]])<br>
+Series length for each sample: tensor([4, 3, 2])
+</p>
+
+<h2>Encoder</h2>
+<p>This time, when processing the batch on the Encoder side, we convert the tensor to a PackedSequence using the pack_padded_sequence function, and then convert it back to a tensor using the pad_packed_sequence function after processing is complete.</p>
+
+<pre><code>class Encoder(nn.Module):
+def __init__(self, input_size, hidden_size):
+    """
+    :param input_size: int, Number of Input language vocabulary
+    :param hidden_size: int, Number of hidden layer units
+    """
+    super(Encoder, self).__init__()
+    self.hidden_size = hidden_size
+
+    self.embedding = nn.Embedding(input_size, hidden_size, padding_idx=PAD)
+    self.gru = nn.GRU(hidden_size, hidden_size)
+
+def forward(self, seqs, input_lengths, hidden=None):
+	"""
+	:param seqs: tensor, Input batches, size=(max_length, batch_size)
+	:param input_lengths: Sentence length for each sample of a batch of inputs
+	:param hidden: tensor, Initial value of hidden state, initialized to 0 if None
+	:return output: tensor, Encoder Output, size=(max_length, batch_size, hidden_size)
+	:return hidden: tensor, Encoder hidden state, size=(1, batch_size, hidden_size)
+	"""
+	emb = self.embedding(seqs)
+	packed = pack_padded_sequence(emb, input_lengths)
+	output, hidden = self.gru(packed, hidden)
+	output, _ = pad_packed_sequence(output)
+	return output, hidden</code></pre>
+
+<h2>Decoder</h2>
+
+<p>This time, the Decoder does not perform padding, etc., so there is no problem with input to the RNN as a normal tensor.</p>
+<pre><code>class Decoder(nn.Module):
+    def __init__(self, hidden_size, output_size):
+    	"""
+    	:param hidden_size: int, Number of hidden layer units
+    	:param output_size: int, Number of vocabulary words in output language
+    	:param dropout: float, drop-out rate
+    	"""
+    	super(Decoder, self).__init__()
+    	self.hidden_size = hidden_size
+    	self.output_size = output_size
+
+    	self.embedding = nn.Embedding(output_size, hidden_size, padding_idx=PAD)
+    	self.gru = nn.GRU(hidden_size, hidden_size)
+    	self.out = nn.Linear(hidden_size, output_size)
+
+    def forward(self, seqs, hidden):
+	"""
+	:param seqs: tensor, Input batches, size=(1, batch_size)
+	:param hidden: tensor, Initial value of hidden state, If None, initialized to 0
+	:return output: tensor, Output of Decoder, size=(1, batch_size, output_size)
+	:return hidden: tensor, Decoder hidden state, size=(1, batch_size, hidden_size)
+	"""
+	emb = self.embedding(seqs)
+	output, hidden = self.gru(emb, hidden)
+	output = self.out(output)
+	return output, hidden</code></pre>
+
+<h2>EncoderDecoder</h2>
+<p>Define an EncoderDecoder class that summarizes a series of processes using the Encoder and Decoder defined above.</p>
+<p>Here are some points to note about processing on the Decoder side.</p>
+<p>In RNNs, the output at time <i>t</i> can be the input at time <i>t+1</i>, but training the Decoder in this way leads to a chain of increasing errors, causing problems with unstable training and slow convergence.</p>
+
+
+</div>
+					</div>
+
+				<!-- Footer -->
+					<footer id="footer">
+						<div class="inner">
+							<section>
+								<h2>Get in touch</h2>
+								<form method="post" action="#">
+									<div class="fields">
+										<div class="field half">
+											<input type="text" name="name" id="name" placeholder="Name" />
+										</div>
+										<div class="field half">
+											<input type="email" name="email" id="email" placeholder="Email" />
+										</div>
+										<div class="field">
+											<textarea name="message" id="message" placeholder="Message"></textarea>
+										</div>
+									</div>
+									<ul class="actions">
+										<li><input type="submit" value="Send" class="primary" /></li>
+									</ul>
+								</form>
+							</section>
+							<section>
+								<h2>Follow</h2>
+								<ul class="icons">
+									<li><a href="#" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-facebook-f"><span class="label">Facebook</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-dribbble"><span class="label">Dribbble</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-github"><span class="label">GitHub</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-500px"><span class="label">500px</span></a></li>
+									<li><a href="#" class="icon solid style2 fa-phone"><span class="label">Phone</span></a></li>
+									<li><a href="#" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
+								</ul>
+							</section>
+							<ul class="copyright">
+								<li>&copy; Untitled. All rights reserved</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+							</ul>
+						</div>
+					</footer>
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
