@@ -1,0 +1,119 @@
+<!DOCTYPE HTML>
+<!--
+	Phantom by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Generic - Phantom by HTML5 UP</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload">
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Header -->
+					<header id="header">
+						<div class="inner">
+
+							<!-- Logo -->
+								<a href="index.html" class="logo">
+									<span class="symbol"><span class="title">Shuko Sasaki</span>
+								</a>
+
+							<!-- Nav -->
+								<nav>
+									<ul>
+										<li><a href="#menu">Menu</a></li>
+									</ul>
+								</nav>
+
+						</div>
+					</header>
+
+				<!-- Menu -->
+					<nav id="menu">
+						<h2>Menu</h2>
+						<ul>
+							<li><a href="index.html">Home</a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+						<div class="inner">
+							<h1>Word2Vec</h1>
+
+							<P>Word2Vec is a generic term for algorithms for learning distributed representations of words, originating from a paper published in 2013 by Tomas Mikolov et al. at Google at the time.</P>
+							<p>In NLP tasks, the input consists of words, but if words are treated as words, they are just a list of letters to the computer, making it difficult to solve complex NLP tasks such as translation and document classification.</p>
+							<p>Therefore, task performance is directly related to how well words, phrases, sentences, and other semantic elements can be converted into useful semantic representations or features.</p>
+							<p>Word2Vec is one of the most well-known tools for learning useful features (vectors) from words; with Word2Vec, semantically similar words can be converted into similar vectors, and furthermore, the resulting word vectors are additive in nature. For example, "Japan" - "Tokyo" ≒  "France" - "Paris".</p>
+							<p>The graph below visualizes the vectors of several countries and their capitals after acquiring word vectors with Skipgram, one of Word2Vec's algorithms, and then compressing the dimensionality using PCA. This is one of the reasons why Word2Vec has become famous, because it can even learn the relationship between countries and their capitals, despite the fact that it is unsupervised learning.</p>
+							<span class="image main"><img src="images/Word2Vec.png" alt="" /></span>
+							<p>Reference:<a href="https://arxiv.org/abs/1310.4546"> Distributed Representations of Words and Phrases and their Compositionality</a></p>
+							<p>There are two main learning models for Word2vec, called CBOW and Skipgram.</p>
+							<p>CBOW learns a word vector that can solve a word prediction task based on surrounding words and Skipgram learns a word vector that can solve a word prediction task based on surrounding words.</p>
+							<p>These can both be viewed as based on the "distributional hypothesis" that words are characterized by their surroundings.</p>
+							<p>In this exercise, we will implement CBOW and Skipgram using PyTorch and actually train on a Japanese dataset. (For this reason, we will also deal with Japanese preprocessing.) In addition, we will also implement Negative Sampling, an efficient learning method.</p>
+
+						</div>
+
+
+					</div>
+
+				<!-- Footer -->
+					<footer id="footer">
+						<div class="inner">
+							<section>
+								<h2>Get in touch</h2>
+								<form method="post" action="#">
+									<div class="fields">
+										<div class="field half">
+											<input type="text" name="name" id="name" placeholder="Name" />
+										</div>
+										<div class="field half">
+											<input type="email" name="email" id="email" placeholder="Email" />
+										</div>
+										<div class="field">
+											<textarea name="message" id="message" placeholder="Message"></textarea>
+										</div>
+									</div>
+									<ul class="actions">
+										<li><input type="submit" value="Send" class="primary" /></li>
+									</ul>
+								</form>
+							</section>
+							<section>
+								<h2>Follow</h2>
+								<ul class="icons">
+									<li><a href="#" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-facebook-f"><span class="label">Facebook</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-dribbble"><span class="label">Dribbble</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-github"><span class="label">GitHub</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-500px"><span class="label">500px</span></a></li>
+									<li><a href="#" class="icon solid style2 fa-phone"><span class="label">Phone</span></a></li>
+									<li><a href="#" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
+								</ul>
+							</section>
+							<ul class="copyright">
+								<li>&copy; Untitled. All rights reserved</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+							</ul>
+						</div>
+					</footer>
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
