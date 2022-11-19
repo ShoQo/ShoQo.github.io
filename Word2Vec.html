@@ -270,27 +270,6 @@ embedding_size = 300 # Number of vector dimensions to assign to each word
 batch_size = 64 # Mini Batch Size
 n_epochs = 3 # Number of Epochs to be studied</code></pre>
 
-<h2>Tips: How to use the iterator</h2>
-<p>2.1 We will be using iterators in the data loader, but since some of you may not be familiar with iterators, we will mention here a simple way to use iterators in Python.</p>
-<pre><code>class TestIter(object):
-    def __init__(self):
-        self.iter = 0
-        self.max_iter = 5
-
-    def __iter__(self): # required
-        print("iter関数が呼び出されました")
-        return self
-
-    def __next__(self):
-        self.iter += 1
-        print("next関数が呼び出されました({}回目)".format(self.iter))
-        if self.iter < self.max_iter:
-            return None
-        else:
-            print("max_iterに達したので終了します")
-            raise StopIteration</code></pre>
-<h1>TODO</h1>
-
 <h2>2.1 Data loader</h2>
 <p>Define a data loader that retrieves a portion of the data (mini-batch) from the data set.<br>
 A dataset refers to the entire data set, and a mini-batch refers to a set of data that is divided into smaller data sets. Since datasets are often large in size, the model is not trained by feeding the entire dataset to the model at once, but rather by dividing the data into mini-batches and feeding them to the model multiple times. (Reference: Batch learning, mini-batch learning, online learning)<br>
