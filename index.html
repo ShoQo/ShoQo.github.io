@@ -1,21 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <style> body { margin: 0; } </style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple 3D Force Graph with Expand/Collapse</title>
+  <style> 
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+    } 
+  </style>
   <script src="//unpkg.com/3d-force-graph"></script>
-  <!--<script src="../../dist/3d-force-graph.js"></script>-->
 </head>
-
 <body>
   <div id="3d-graph"></div>
 
   <script>
+    // Simple graph with fewer nodes and links
     const gData = {
       nodes: [
-        { id: 0 },
-        { id: 1 },
-        { id: 2 },
-        { id: 3 },
-        { id: 4 }
+        { id: 0, expanded: false },
+        { id: 1, expanded: false },
+        { id: 2, expanded: false },
+        { id: 3, expanded: false },
+        { id: 4, expanded: false }
       ],
       links: [
         { source: 0, target: 1 },
@@ -27,6 +35,32 @@
 
     const Graph = ForceGraph3D()
       (document.getElementById('3d-graph'))
-        .graphData(gData);
+        .graphData(gData)
+        .onNodeClick(node => {
+          // Toggle expand/collapse
+          node.expanded = !node.expanded;
+          
+          if (node.expanded) {
+            // Add child nodes (for simplicity, add 2 children to each node)
+            const newNodes = [
+              { id: gData.nodes.length, expanded: false },
+              { id: gData.nodes.length + 1, expanded: false }
+            ];
+            gData.nodes.push(...newNodes);
+            gData.links.push(
+              { source: node.id, target: newNodes[0].id },
+              { source: node.id, target: newNodes[1].id }
+            );
+          } else {
+            // Collapse: remove child nodes and their links
+            const childNodes = gData.links.filter(link => link.source === node.id).map(link => link.target);
+            gData.nodes = gData.nodes.filter(n => !childNodes.includes(n.id));
+            gData.links = gData.links.filter(link => link.source !== node.id && !childNodes.includes(link.target));
+          }
+
+          // Update the graph with the new data
+          Graph.graphData(gData);
+        });
   </script>
 </body>
+</html>
