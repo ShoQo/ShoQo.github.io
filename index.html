@@ -9,16 +9,20 @@
   <div id="3d-graph"></div>
 
   <script>
-    // Random tree
-    const N = 300;
     const gData = {
-      nodes: [...Array(N).keys()].map(i => ({ id: i })),
-      links: [...Array(N).keys()]
-        .filter(id => id)
-        .map(id => ({
-          source: id,
-          target: Math.round(Math.random() * (id-1))
-        }))
+      nodes: [
+        { id: 0 },
+        { id: 1 },
+        { id: 2 },
+        { id: 3 },
+        { id: 4 }
+      ],
+      links: [
+        { source: 0, target: 1 },
+        { source: 0, target: 2 },
+        { source: 1, target: 3 },
+        { source: 2, target: 4 }
+      ]
     };
 
     const Graph = ForceGraph3D()
