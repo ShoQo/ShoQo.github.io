@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Three.js Kinship Graph</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/3d-force-graph@2.2.0/dist/3d-force-graph.min.js"></script>
+  <style>
+    body { margin: 0; }
+    #graph-container { width: 100%; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="graph-container"></div>
+  
+  <script>
+    // Set up scene, camera, and renderer
+    const graphContainer = document.getElementById('graph-container');
+
+    // Create a new instance of ForceGraph3D
+    const Graph = new ForceGraph3D()(graphContainer)
+      .nodeColor(() => 'blue')
+      .linkColor(() => 'black')
+      .nodeAutoColorBy('id');
+
+    // Define graph data (nodes and links)
+    const data = {
+      nodes: [
+        { id: 'parent1' },
+        { id: 'parent2' },
+        { id: 'child1' },
+        { id: 'child2' }
+      ],
+      links: [
+        { source: 'parent1', target: 'child1' },
+        { source: 'parent1', target: 'child2' },
+        { source: 'parent2', target: 'child1' },
+        { source: 'parent2', target: 'child2' }
+      ]
+    };
+
+    // Set the graph data
+    Graph.graphData(data);
+
+    // Add OrbitControls for navigation
+    const controls = new THREE.OrbitControls(Graph.camera(), graphContainer);
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      Graph.width(graphContainer.clientWidth);
+      Graph.height(graphContainer.clientHeight);
+      Graph.refresh();
+    });
+  </script>
+</body>
+</html>
