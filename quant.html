@@ -57,6 +57,27 @@
   <li><strong>Short Positions</strong>: Not considering the need to find a lender when taking a short position on a security.</li>
 </ol>
 
+    <h1>Why Cross-Validation Fails for Financial Time Series Data</h1>
+    <p>Applying traditional cross-validation to financial time series data can cause issues due to the following reasons:</p>
+    
+    <h2>Non-IID Assumption</h2>
+    <p>Financial time series data does not follow the assumption that data points are independent and identically distributed (IID). In time series, past values influence future values, so there is autocorrelation in the data.</p>
+    <p>In finance, the features <code>X<sub>t</sub></code> and labels <code>Y<sub>t</sub></code> at time <code>t</code> are related to <code>X<sub>t+1</sub></code> and <code>Y<sub>t+1</sub></code>. For example, stock prices on one day are influenced by prices on the previous day.</p>
+    <p>This violates the IID assumption necessary for traditional cross-validation methods to work effectively.</p>
+    
+    <h2>Data Leakage</h2>
+    <p>In traditional k-fold cross-validation (CV), data points from adjacent time periods (e.g., <code>t</code> and <code>t+1</code>) might end up in different sets (training vs. test), even though they are correlated. This can lead to data leakage, where the training data inadvertently contains information from the test data, resulting in artificially good performance.</p>
+
+    <h2>Purging and Embargo to Prevent Data Leakage</h2>
+    <p>To address these issues, two techniques are introduced: purging and embargoing.</p>
+
+    <h3>Purging</h3>
+    <p>This technique removes data points from the training set that are too close to the test set in time. By removing data points that might leak information from the training set to the test set, purging helps prevent data leakage.</p>
+
+    <h3>Embargo</h3>
+    <p>Embargoing involves skipping a "buffer period" after the training set when selecting the test set. This further reduces the chance that information from the training set will overlap with the test set. Essentially, after a model is trained on a given time period, it is prevented from immediately testing on the subsequent period to avoid contamination.</p>
+
+
 							
 						</div>
 					</div>
