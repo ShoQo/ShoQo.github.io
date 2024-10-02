@@ -1,41 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simple 3D Force Graph</title>
-  <style> 
-    body { 
-      margin: 0; 
-      overflow: hidden; 
-    } 
-  </style>
+  <style> body { margin: 0; } </style>
+
   <script src="//unpkg.com/3d-force-graph"></script>
+  <!--<script src="../../dist/3d-force-graph.js"></script>-->
 </head>
+
 <body>
   <div id="3d-graph"></div>
 
-  <script>
-    // Simple graph with fewer nodes and links
-    const gData = {
-      nodes: [
-        { id: 0 },
-        { id: 1 },
-        { id: 2 },
-        { id: 3 },
-        { id: 4 }
-      ],
-      links: [
-        { source: 0, target: 1 },
-        { source: 0, target: 2 },
-        { source: 1, target: 3 },
-        { source: 2, target: 4 }
-      ]
-    };
+  <script type="importmap">{ "imports": { "three": "//unpkg.com/three/build/three.module.js" }}</script>
+  <script type="module">
+    import SpriteText from "//unpkg.com/three-spritetext/dist/three-spritetext.mjs";
 
     const Graph = ForceGraph3D()
       (document.getElementById('3d-graph'))
-        .graphData(gData);
+        .jsonUrl('../datasets/miserables.json')
+        .nodeAutoColorBy('group')
+        .nodeThreeObject(node => {
+          const sprite = new SpriteText(node.id);
+          sprite.material.depthWrite = false; // make sprite background transparent
+          sprite.color = node.color;
+          sprite.textHeight = 8;
+          return sprite;
+        });
+
+    // Spread nodes a little wider
+    Graph.d3Force('charge').strength(-120);
+
   </script>
 </body>
-</html>
