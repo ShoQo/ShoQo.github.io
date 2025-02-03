@@ -6,7 +6,6 @@
   <title>Black-Scholes Calculator</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* Same CSS styles as original */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
@@ -101,26 +100,22 @@
   </div>
 
   <script>
-    // Chart instances
-    let callChart = null;
-    let putChart = null;
-
-    // Update slider displays and setup listeners
+    // Update the slider value displays
     const sliders = ["stockPrice", "strikePrice", "timeToExpiry", "riskFreeRate", "volatility", "callPrice", "putPrice"];
     sliders.forEach(id => {
       const slider = document.getElementById(id);
       const valueDisplay = document.getElementById(id + "Value");
       slider.addEventListener("input", () => {
         valueDisplay.textContent = slider.value;
-        calculatePnL();
       });
     });
 
-    // Normal CDF and error function
+    // Cumulative distribution function for standard normal distribution
     function normalCDF(x) {
       return (1.0 + erf(x / Math.sqrt(2.0))) / 2.0;
     }
 
+    // Approximation for the error function
     function erf(x) {
       const sign = x >= 0 ? 1 : -1;
       x = Math.abs(x);
@@ -130,16 +125,17 @@
       const a4 = -1.453152027;
       const a5 = 1.061405429;
       const p = 0.3275911;
+
       const t = 1.0 / (1.0 + p * x);
       const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
       return sign * y;
     }
 
-    // Black-Scholes calculator
+    // Black-Scholes Formula
     function blackScholes(S, X, T, r, sigma, optionType) {
       const d1 = (Math.log(S / X) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
       const d2 = d1 - sigma * Math.sqrt(T);
-      
+
       if (optionType === "call") {
         return S * normalCDF(d1) - X * Math.exp(-r * T) * normalCDF(d2);
       } else if (optionType === "put") {
@@ -147,17 +143,12 @@
       }
     }
 
-    // Draw/update charts
+    // Draw Charts
     function drawCharts(callPrices, putPrices, stockPrices) {
       const ctxCall = document.getElementById("callPriceChart").getContext("2d");
       const ctxPut = document.getElementById("putPriceChart").getContext("2d");
 
-      // Destroy existing charts
-      if (callChart) callChart.destroy();
-      if (putChart) putChart.destroy();
-
-      // Create new charts
-      callChart = new Chart(ctxCall, {
+      new Chart(ctxCall, {
         type: "line",
         data: {
           labels: stockPrices,
@@ -180,7 +171,7 @@
         }
       });
 
-      putChart = new Chart(ctxPut, {
+      new Chart(ctxPut, {
         type: "line",
         data: {
           labels: stockPrices,
@@ -204,9 +195,8 @@
       });
     }
 
-    // Main calculation function
+    // Calculate P&L
     function calculatePnL() {
-      // Get current values
       const S = parseFloat(document.getElementById("stockPrice").value);
       const X = parseFloat(document.getElementById("strikePrice").value);
       const T = parseFloat(document.getElementById("timeToExpiry").value);
@@ -215,33 +205,28 @@
       const purchaseCall = parseFloat(document.getElementById("callPrice").value);
       const purchasePut = parseFloat(document.getElementById("putPrice").value);
 
-      // Generate price curves
+      const callPrice = blackScholes(S, X, T, r, sigma, "call");
+      const putPrice = blackScholes(S, X, T, r, sigma, "put");
+
+      const callPnL = callPrice - purchaseCall;
+      const putPnL = putPrice - purchasePut;
+
+      const output = document.getElementById("output");
+      output.innerHTML = `Call Option P&L: $${callPnL.toFixed(2)}<br>Put Option P&L: $${putPnL.toFixed(2)}`;
+
+      // Generate price charts for a range of stock prices
       const stockPrices = [];
       const callPrices = [];
       const putPrices = [];
-      
+
       for (let price = 50; price <= 150; price += 5) {
         stockPrices.push(price);
         callPrices.push(blackScholes(price, X, T, r, sigma, "call"));
         putPrices.push(blackScholes(price, X, T, r, sigma, "put"));
       }
 
-      // Update charts
       drawCharts(callPrices, putPrices, stockPrices);
-
-      // Calculate P&L
-      const currentCallPrice = blackScholes(S, X, T, r, sigma, "call");
-      const currentPutPrice = blackScholes(S, X, T, r, sigma, "put");
-      const callPnL = currentCallPrice - purchaseCall;
-      const putPnL = currentPutPrice - purchasePut;
-
-      // Update output
-      document.getElementById("output").innerHTML = 
-        `Call Option P&L: $${callPnL.toFixed(2)}<br>Put Option P&L: $${putPnL.toFixed(2)}`;
     }
-
-    // Initial load
-    calculatePnL();
   </script>
 </body>
 </html>
