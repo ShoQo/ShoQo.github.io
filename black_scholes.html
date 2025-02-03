@@ -1,56 +1,57 @@
-<!DOCTYPE HTML>
-<!--
-	Phantom by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
-<html>
-	<head>
-		<title>Generic - Phantom by HTML5 UP</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" href="assets/css/main.css" />
-		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
-	</head>
-	<body class="is-preload">
-		<!-- Wrapper -->
-			<div id="wrapper">
-
-				<!-- Header -->
-					<header id="header">
-						<div class="inner">
-
-							<!-- Logo -->
-								<a href="index.html" class="logo">
-									<span class="symbol"><span class="title">Shuko Sasaki</span>
-								</a>
-
-							<!-- Nav -->
-								<nav>
-									<ul>
-										<li><a href="#menu">Menu</a></li>
-									</ul>
-								</nav>
-
-						</div>
-					</header>
-
-				<!-- Menu -->
-					<nav id="menu">
-						<h2>Menu</h2>
-						<ul>
-							<li><a href="index.html">Home</a></li>
-							<li><a href="generic.html">Ipsum veroeros</a></li>
-							<li><a href="generic.html">Tempus etiam</a></li>
-							<li><a href="generic.html">Consequat dolor</a></li>
-							<li><a href="elements.html">Elements</a></li>
-						</ul>
-					</nav>
-
-				<!-- Main -->
-					<div id="main">
-						<div class="inner">
-              <body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Black-Scholes Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Same CSS styles as original */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .slider-container {
+      margin: 15px 0;
+    }
+    .slider-container label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .slider-container input {
+      width: 100%;
+    }
+    .output {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .chart-container {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
   <div class="container">
     <h1>Black-Scholes Option Pricing</h1>
 
@@ -99,30 +100,59 @@
     </div>
   </div>
 
-<script>
-    // Add chart instance references
+  <script>
+    // Chart instances
     let callChart = null;
     let putChart = null;
 
-    // Update slider value displays and add chart update
+    // Update slider displays and setup listeners
     const sliders = ["stockPrice", "strikePrice", "timeToExpiry", "riskFreeRate", "volatility", "callPrice", "putPrice"];
     sliders.forEach(id => {
       const slider = document.getElementById(id);
       const valueDisplay = document.getElementById(id + "Value");
       slider.addEventListener("input", () => {
         valueDisplay.textContent = slider.value;
-        calculatePnL(); // Update charts when any slider changes
+        calculatePnL();
       });
     });
 
-    // Keep the normalCDF, erf, and blackScholes functions the same
+    // Normal CDF and error function
+    function normalCDF(x) {
+      return (1.0 + erf(x / Math.sqrt(2.0))) / 2.0;
+    }
 
-    // Modified drawCharts function to handle chart destruction
+    function erf(x) {
+      const sign = x >= 0 ? 1 : -1;
+      x = Math.abs(x);
+      const a1 = 0.254829592;
+      const a2 = -0.284496736;
+      const a3 = 1.421413741;
+      const a4 = -1.453152027;
+      const a5 = 1.061405429;
+      const p = 0.3275911;
+      const t = 1.0 / (1.0 + p * x);
+      const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+      return sign * y;
+    }
+
+    // Black-Scholes calculator
+    function blackScholes(S, X, T, r, sigma, optionType) {
+      const d1 = (Math.log(S / X) + (r + (sigma ** 2) / 2) * T) / (sigma * Math.sqrt(T));
+      const d2 = d1 - sigma * Math.sqrt(T);
+      
+      if (optionType === "call") {
+        return S * normalCDF(d1) - X * Math.exp(-r * T) * normalCDF(d2);
+      } else if (optionType === "put") {
+        return X * Math.exp(-r * T) * normalCDF(-d2) - S * normalCDF(-d1);
+      }
+    }
+
+    // Draw/update charts
     function drawCharts(callPrices, putPrices, stockPrices) {
       const ctxCall = document.getElementById("callPriceChart").getContext("2d");
       const ctxPut = document.getElementById("putPriceChart").getContext("2d");
 
-      // Destroy existing charts if they exist
+      // Destroy existing charts
       if (callChart) callChart.destroy();
       if (putChart) putChart.destroy();
 
@@ -139,7 +169,15 @@
             fill: true
           }]
         },
-        options: { responsive: true, plugins: { title: { display: true, text: "Call Option Prices" } } }
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: "Call Option Prices"
+            }
+          }
+        }
       });
 
       putChart = new Chart(ctxPut, {
@@ -154,92 +192,56 @@
             fill: true
           }]
         },
-        options: { responsive: true, plugins: { title: { display: true, text: "Put Option Prices" } } }
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: "Put Option Prices"
+            }
+          }
+        }
       });
     }
 
-    // Modified calculatePnL to handle dynamic updates
+    // Main calculation function
     function calculatePnL() {
-      // Same parameter parsing as before
-      
-      // Generate price charts for a range of stock prices
+      // Get current values
+      const S = parseFloat(document.getElementById("stockPrice").value);
+      const X = parseFloat(document.getElementById("strikePrice").value);
+      const T = parseFloat(document.getElementById("timeToExpiry").value);
+      const r = parseFloat(document.getElementById("riskFreeRate").value);
+      const sigma = parseFloat(document.getElementById("volatility").value);
+      const purchaseCall = parseFloat(document.getElementById("callPrice").value);
+      const purchasePut = parseFloat(document.getElementById("putPrice").value);
+
+      // Generate price curves
       const stockPrices = [];
       const callPrices = [];
       const putPrices = [];
-
+      
       for (let price = 50; price <= 150; price += 5) {
         stockPrices.push(price);
         callPrices.push(blackScholes(price, X, T, r, sigma, "call"));
         putPrices.push(blackScholes(price, X, T, r, sigma, "put"));
       }
 
+      // Update charts
       drawCharts(callPrices, putPrices, stockPrices);
-      
-      // Keep the P&L calculation and output display
-      const callPrice = blackScholes(S, X, T, r, sigma, "call");
-      const putPrice = blackScholes(S, X, T, r, sigma, "put");
-      const callPnL = callPrice - purchaseCall;
-      const putPnL = putPrice - purchasePut;
+
+      // Calculate P&L
+      const currentCallPrice = blackScholes(S, X, T, r, sigma, "call");
+      const currentPutPrice = blackScholes(S, X, T, r, sigma, "put");
+      const callPnL = currentCallPrice - purchaseCall;
+      const putPnL = currentPutPrice - purchasePut;
+
+      // Update output
       document.getElementById("output").innerHTML = 
         `Call Option P&L: $${callPnL.toFixed(2)}<br>Put Option P&L: $${putPnL.toFixed(2)}`;
     }
 
-    // Initial calculation
+    // Initial load
     calculatePnL();
   </script>
 </body>
-						</div>
-					</div>
-
-				<!-- Footer -->
-					<footer id="footer">
-						<div class="inner">
-							<section>
-								<h2>Get in touch</h2>
-								<form method="post" action="#">
-									<div class="fields">
-										<div class="field half">
-											<input type="text" name="name" id="name" placeholder="Name" />
-										</div>
-										<div class="field half">
-											<input type="email" name="email" id="email" placeholder="Email" />
-										</div>
-										<div class="field">
-											<textarea name="message" id="message" placeholder="Message"></textarea>
-										</div>
-									</div>
-									<ul class="actions">
-										<li><input type="submit" value="Send" class="primary" /></li>
-									</ul>
-								</form>
-							</section>
-							<section>
-								<h2>Follow</h2>
-								<ul class="icons">
-									<li><a href="#" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
-									<li><a href="#" class="icon brands style2 fa-facebook-f"><span class="label">Facebook</span></a></li>
-									<li><a href="#" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
-									<li><a href="#" class="icon brands style2 fa-dribbble"><span class="label">Dribbble</span></a></li>
-									<li><a href="#" class="icon brands style2 fa-github"><span class="label">GitHub</span></a></li>
-									<li><a href="#" class="icon brands style2 fa-500px"><span class="label">500px</span></a></li>
-									<li><a href="#" class="icon solid style2 fa-phone"><span class="label">Phone</span></a></li>
-									<li><a href="#" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
-								</ul>
-							</section>
-							<ul class="copyright">
-								<li>&copy; Untitled. All rights reserved</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
-							</ul>
-						</div>
-					</footer>
-
-			</div>
-
-		<!-- Scripts -->
-			<script src="assets/js/jquery.min.js"></script>
-			<script src="assets/js/browser.min.js"></script>
-			<script src="assets/js/breakpoints.min.js"></script>
-			<script src="assets/js/util.js"></script>
-			<script src="assets/js/main.js"></script>
-
-	</body>
 </html>
