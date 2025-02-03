@@ -1,0 +1,245 @@
+<!DOCTYPE HTML>
+<!--
+	Phantom by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Generic - Phantom by HTML5 UP</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload">
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Header -->
+					<header id="header">
+						<div class="inner">
+
+							<!-- Logo -->
+								<a href="index.html" class="logo">
+									<span class="symbol"><span class="title">Shuko Sasaki</span>
+								</a>
+
+							<!-- Nav -->
+								<nav>
+									<ul>
+										<li><a href="#menu">Menu</a></li>
+									</ul>
+								</nav>
+
+						</div>
+					</header>
+
+				<!-- Menu -->
+					<nav id="menu">
+						<h2>Menu</h2>
+						<ul>
+							<li><a href="index.html">Home</a></li>
+							<li><a href="generic.html">Ipsum veroeros</a></li>
+							<li><a href="generic.html">Tempus etiam</a></li>
+							<li><a href="generic.html">Consequat dolor</a></li>
+							<li><a href="elements.html">Elements</a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+						<div class="inner">
+              <body>
+  <div class="container">
+    <h1>Black-Scholes Option Pricing</h1>
+
+    <div class="slider-container">
+      <label for="stockPrice">Stock Price (S): <span id="stockPriceValue">100</span></label>
+      <input type="range" id="stockPrice" min="1" max="500" value="100">
+    </div>
+
+    <div class="slider-container">
+      <label for="strikePrice">Strike Price (X): <span id="strikePriceValue">110</span></label>
+      <input type="range" id="strikePrice" min="1" max="500" value="110">
+    </div>
+
+    <div class="slider-container">
+      <label for="timeToExpiry">Time to Expiry (Years, T): <span id="timeToExpiryValue">1</span></label>
+      <input type="range" id="timeToExpiry" min="0.1" max="5" step="0.1" value="1">
+    </div>
+
+    <div class="slider-container">
+      <label for="riskFreeRate">Risk-Free Rate (r): <span id="riskFreeRateValue">0.05</span></label>
+      <input type="range" id="riskFreeRate" min="0" max="0.2" step="0.01" value="0.05">
+    </div>
+
+    <div class="slider-container">
+      <label for="volatility">Volatility (σ): <span id="volatilityValue">0.2</span></label>
+      <input type="range" id="volatility" min="0.01" max="1" step="0.01" value="0.2">
+    </div>
+
+    <div class="slider-container">
+      <label for="callPrice">Call Option Purchase Price: <span id="callPriceValue">6</span></label>
+      <input type="range" id="callPrice" min="0" max="50" step="0.1" value="6">
+    </div>
+
+    <div class="slider-container">
+      <label for="putPrice">Put Option Purchase Price: <span id="putPriceValue">12</span></label>
+      <input type="range" id="putPrice" min="0" max="50" step="0.1" value="12">
+    </div>
+
+    <button onclick="calculatePnL()">Calculate P&L</button>
+
+    <div class="output" id="output"></div>
+
+    <div class="chart-container">
+      <canvas id="callPriceChart"></canvas>
+      <canvas id="putPriceChart"></canvas>
+    </div>
+  </div>
+
+<script>
+    // Add chart instance references
+    let callChart = null;
+    let putChart = null;
+
+    // Update slider value displays and add chart update
+    const sliders = ["stockPrice", "strikePrice", "timeToExpiry", "riskFreeRate", "volatility", "callPrice", "putPrice"];
+    sliders.forEach(id => {
+      const slider = document.getElementById(id);
+      const valueDisplay = document.getElementById(id + "Value");
+      slider.addEventListener("input", () => {
+        valueDisplay.textContent = slider.value;
+        calculatePnL(); // Update charts when any slider changes
+      });
+    });
+
+    // Keep the normalCDF, erf, and blackScholes functions the same
+
+    // Modified drawCharts function to handle chart destruction
+    function drawCharts(callPrices, putPrices, stockPrices) {
+      const ctxCall = document.getElementById("callPriceChart").getContext("2d");
+      const ctxPut = document.getElementById("putPriceChart").getContext("2d");
+
+      // Destroy existing charts if they exist
+      if (callChart) callChart.destroy();
+      if (putChart) putChart.destroy();
+
+      // Create new charts
+      callChart = new Chart(ctxCall, {
+        type: "line",
+        data: {
+          labels: stockPrices,
+          datasets: [{
+            label: "Call Option Price",
+            data: callPrices,
+            borderColor: "blue",
+            backgroundColor: "rgba(0, 0, 255, 0.1)",
+            fill: true
+          }]
+        },
+        options: { responsive: true, plugins: { title: { display: true, text: "Call Option Prices" } } }
+      });
+
+      putChart = new Chart(ctxPut, {
+        type: "line",
+        data: {
+          labels: stockPrices,
+          datasets: [{
+            label: "Put Option Price",
+            data: putPrices,
+            borderColor: "red",
+            backgroundColor: "rgba(255, 0, 0, 0.1)",
+            fill: true
+          }]
+        },
+        options: { responsive: true, plugins: { title: { display: true, text: "Put Option Prices" } } }
+      });
+    }
+
+    // Modified calculatePnL to handle dynamic updates
+    function calculatePnL() {
+      // Same parameter parsing as before
+      
+      // Generate price charts for a range of stock prices
+      const stockPrices = [];
+      const callPrices = [];
+      const putPrices = [];
+
+      for (let price = 50; price <= 150; price += 5) {
+        stockPrices.push(price);
+        callPrices.push(blackScholes(price, X, T, r, sigma, "call"));
+        putPrices.push(blackScholes(price, X, T, r, sigma, "put"));
+      }
+
+      drawCharts(callPrices, putPrices, stockPrices);
+      
+      // Keep the P&L calculation and output display
+      const callPrice = blackScholes(S, X, T, r, sigma, "call");
+      const putPrice = blackScholes(S, X, T, r, sigma, "put");
+      const callPnL = callPrice - purchaseCall;
+      const putPnL = putPrice - purchasePut;
+      document.getElementById("output").innerHTML = 
+        `Call Option P&L: $${callPnL.toFixed(2)}<br>Put Option P&L: $${putPnL.toFixed(2)}`;
+    }
+
+    // Initial calculation
+    calculatePnL();
+  </script>
+</body>
+						</div>
+					</div>
+
+				<!-- Footer -->
+					<footer id="footer">
+						<div class="inner">
+							<section>
+								<h2>Get in touch</h2>
+								<form method="post" action="#">
+									<div class="fields">
+										<div class="field half">
+											<input type="text" name="name" id="name" placeholder="Name" />
+										</div>
+										<div class="field half">
+											<input type="email" name="email" id="email" placeholder="Email" />
+										</div>
+										<div class="field">
+											<textarea name="message" id="message" placeholder="Message"></textarea>
+										</div>
+									</div>
+									<ul class="actions">
+										<li><input type="submit" value="Send" class="primary" /></li>
+									</ul>
+								</form>
+							</section>
+							<section>
+								<h2>Follow</h2>
+								<ul class="icons">
+									<li><a href="#" class="icon brands style2 fa-twitter"><span class="label">Twitter</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-facebook-f"><span class="label">Facebook</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-instagram"><span class="label">Instagram</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-dribbble"><span class="label">Dribbble</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-github"><span class="label">GitHub</span></a></li>
+									<li><a href="#" class="icon brands style2 fa-500px"><span class="label">500px</span></a></li>
+									<li><a href="#" class="icon solid style2 fa-phone"><span class="label">Phone</span></a></li>
+									<li><a href="#" class="icon solid style2 fa-envelope"><span class="label">Email</span></a></li>
+								</ul>
+							</section>
+							<ul class="copyright">
+								<li>&copy; Untitled. All rights reserved</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+							</ul>
+						</div>
+					</footer>
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
