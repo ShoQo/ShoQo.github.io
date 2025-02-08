@@ -1,31 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <style> body { margin: 0; } </style>
-
-  <script src="//unpkg.com/3d-force-graph"></script>
-  <!--<script src="../../dist/3d-force-graph.js"></script>-->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Force Graph Node Click Example</title>
+  <script src="https://unpkg.com/3d-force-graph"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.2/angular.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #3d-graph {
+      width: 100%;
+      height: 100%;
+    }
+    #overlaycontainer {
+      position: absolute;
+      top: 10%;
+      left: 10%;
+      width: 400px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      display: none;
+      z-index: 1000;
+    }
+    .close-btn {
+      float: right;
+      cursor: pointer;
+      color: red;
+    }
+  </style>
 </head>
-
 <body>
   <div id="3d-graph"></div>
+  <div id="overlaycontainer">
+    <div>
+      <span class="close-btn" onclick="document.getElementById('overlaycontainer').style.display = 'none';">✖</span>
+    </div>
+    <div id="node-details"></div>
+  </div>
+  
+  <script>
+    // Create the 3D force graph
+    const graph = ForceGraph3D()(document.getElementById('3d-graph'));
 
-  <script type="importmap">{ "imports": { "three": "//unpkg.com/three/build/three.module.js" }}</script>
-  <script type="module">
-    import SpriteText from "//unpkg.com/three-spritetext/dist/three-spritetext.mjs";
+    // Sample graph data
+    const data = {
+      nodes: [
+        { id: 1, name: 'Node 1', gender: 'Male', occupation: 'Engineer', birthdate: '1990-01-01' },
+        { id: 2, name: 'Node 2', gender: 'Female', occupation: 'Doctor', birthdate: '1995-06-15' },
+        { id: 3, name: 'Node 3', gender: 'Male', occupation: 'Artist', birthdate: '1988-12-12' },
+      ],
+      links: [
+        { source: 1, target: 2 },
+        { source: 1, target: 3 },
+      ],
+    };
 
-    const Graph = ForceGraph3D()
-      (document.getElementById('3d-graph'))
-        .jsonUrl('miserables.json')
-        .nodeAutoColorBy('group')
-        .nodeThreeObject(node => {
-          const sprite = new SpriteText(node.id);
-          sprite.material.depthWrite = false; // make sprite background transparent
-          sprite.color = node.color;
-          sprite.textHeight = 8;
-          return sprite;
-        });
-
-    // Spread nodes a little wider
-    Graph.d3Force('charge').strength(-120);
-
+    // Initialize graph
+    graph
+      .graphData(data)
+      .nodeAutoColorBy('gender')
+      .onNodeClick(node => {
+        // Display node details in the overlay
+        const overlay = document.getElementById('overlaycontainer');
+        const details = document.getElementById('node-details');
+        details.innerHTML = `
+          <h3>${node.name}</h3>
+          <p><strong>Gender:</strong> ${node.gender}</p>
+          <p><strong>Occupation:</strong> ${node.occupation}</p>
+          <p><strong>Birthdate:</strong> ${node.birthdate}</p>
+        `;
+        overlay.style.display = 'block';
+      });
   </script>
 </body>
+</html>
